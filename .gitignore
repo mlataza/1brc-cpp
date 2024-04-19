@@ -6,3 +6,6 @@ CMakeCache.txt
 
 create_measurements
 measurements.txt
+
+calculate_average
+calculate_average_baseline

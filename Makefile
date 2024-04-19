@@ -129,6 +129,43 @@ create_measurements/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/create_measurements.dir/build.make CMakeFiles/create_measurements.dir/build
 .PHONY : create_measurements/fast
 
+#=============================================================================
+# Target rules for targets named calculate_average_baseline
+
+# Build rule for target.
+calculate_average_baseline: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 calculate_average_baseline
+.PHONY : calculate_average_baseline
+
+# fast build rule for target.
+calculate_average_baseline/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/calculate_average_baseline.dir/build.make CMakeFiles/calculate_average_baseline.dir/build
+.PHONY : calculate_average_baseline/fast
+
+src/calculate_average_baseline.o: src/calculate_average_baseline.cpp.o
+.PHONY : src/calculate_average_baseline.o
+
+# target to build an object file
+src/calculate_average_baseline.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/calculate_average_baseline.dir/build.make CMakeFiles/calculate_average_baseline.dir/src/calculate_average_baseline.cpp.o
+.PHONY : src/calculate_average_baseline.cpp.o
+
+src/calculate_average_baseline.i: src/calculate_average_baseline.cpp.i
+.PHONY : src/calculate_average_baseline.i
+
+# target to preprocess a source file
+src/calculate_average_baseline.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/calculate_average_baseline.dir/build.make CMakeFiles/calculate_average_baseline.dir/src/calculate_average_baseline.cpp.i
+.PHONY : src/calculate_average_baseline.cpp.i
+
+src/calculate_average_baseline.s: src/calculate_average_baseline.cpp.s
+.PHONY : src/calculate_average_baseline.s
+
+# target to generate assembly for a file
+src/calculate_average_baseline.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/calculate_average_baseline.dir/build.make CMakeFiles/calculate_average_baseline.dir/src/calculate_average_baseline.cpp.s
+.PHONY : src/calculate_average_baseline.cpp.s
+
 src/create_measurements.o: src/create_measurements.cpp.o
 .PHONY : src/create_measurements.o
 
@@ -161,7 +198,11 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... calculate_average_baseline"
 	@echo "... create_measurements"
+	@echo "... src/calculate_average_baseline.o"
+	@echo "... src/calculate_average_baseline.i"
+	@echo "... src/calculate_average_baseline.s"
 	@echo "... src/create_measurements.o"
 	@echo "... src/create_measurements.i"
 	@echo "... src/create_measurements.s"
