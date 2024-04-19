@@ -14,14 +14,19 @@ struct Measurements
 
     void record(double measurement)
     {
-        if (count == 0) {
+        if (count == 0)
+        {
             min = measurement;
             max = measurement;
             sum = measurement;
             count = 1;
-        } else {
-            if (measurement < min) min = measurement;
-            if (measurement > max) max = measurement;
+        }
+        else
+        {
+            if (measurement < min)
+                min = measurement;
+            if (measurement > max)
+                max = measurement;
             sum += measurement;
             count++;
         }
@@ -45,19 +50,21 @@ int main()
         stations[station].record(std::stod(measurement));
     }
 
-    // Print the results 
+    // Print the results
     std::cout << '{';
     std::size_t i = 0;
 
     // Print each station summary using the format: <station>=<min>/<mean>/<max>
-    for (auto data : stations) {
+    for (auto data : stations)
+    {
         std::cout << data.first << '='
-                << std::fixed << std::setprecision(1)
-                << data.second.min << '/'
-                << data.second.mean() << '/'
-                << data.second.max;
+                  << std::fixed << std::setprecision(1)
+                  << data.second.min << '/'
+                  << data.second.mean() << '/'
+                  << data.second.max;
 
-        if (i + 1 < stations.size()) {
+        if (i + 1 < stations.size())
+        {
             std::cout << ", ";
         }
 
