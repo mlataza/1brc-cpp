@@ -3,6 +3,7 @@
 /CMakeFiles
 *.cmake
 CMakeCache.txt
+Makefile
 
 create_measurements
 measurements.txt
