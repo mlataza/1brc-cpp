@@ -1,0 +1,8 @@
+/build
+/.vscode
+/CMakeFiles
+*.cmake
+CMakeCache.txt
+
+create_measurements
+measurements.txt
