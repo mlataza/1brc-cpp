@@ -1,0 +1,1 @@
+diff <(cat $1 | tr , "\n") <(cat reference.txt | tr , "\n")
