@@ -2,11 +2,10 @@
 /.vscode
 /CMakeFiles
 *.cmake
-CMakeCache.txt
+*.txt
+!CMakeLists.txt
 Makefile
 
 create_measurements
-measurements.txt
 
-calculate_average
-calculate_average_baseline
+/calculate_average*
