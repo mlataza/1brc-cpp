@@ -186,12 +186,12 @@ static inline auto operator<<(std::ostream &os, const Measurements &measurements
               << measurements.max();
 }
 
-int main()
+auto main() -> int
 {
     auto file = std::ifstream{"measurements.txt", std::ios::binary};
     auto stations = std::unordered_map<std::string, Measurements>{};
 
-    // SLOW!!!
+    // TODO: Read the file using threads
     readStations(file, stations);
 
     // Copy and sort the station names
