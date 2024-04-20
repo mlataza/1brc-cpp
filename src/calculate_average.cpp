@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
+#include <array>
 
 struct Number
 {
@@ -22,7 +23,7 @@ class Measurements
     std::int64_t _sum = 0;
 
 public:
-    void record(std::int64_t measurement)
+    inline auto record(std::int64_t measurement) -> void
     {
         if (_count == 0)
         {
@@ -42,7 +43,7 @@ public:
         }
     }
 
-    Number mean() const
+    inline auto mean() const -> Number
     {
         auto digits = (_sum * 10) / _count;
 
@@ -54,88 +55,28 @@ public:
         return {digits / 10};
     }
 
-    Number min() const
+    inline auto min() const -> Number
     {
         return {_min};
     }
 
-    Number max() const
+    inline auto max() const -> Number
     {
         return {_max};
     }
 
-    auto sum() const -> std::int64_t
+    inline auto sum() const -> std::int64_t
     {
         return _sum;
     }
-    
-    auto count() const -> std::int64_t
+
+    inline auto count() const -> std::int64_t
     {
         return _count;
     }
 };
 
-// real    2m11.421s
-// user    1m58.426s
-// sys     0m8.36
-static inline void readStations(std::ifstream &file, std::unordered_map<std::string, Measurements> &stations);
-
-static inline std::ostream &operator<<(std::ostream &os, const Number &number)
-{
-    auto wholeDigits = number.digits / 10;
-
-    if (wholeDigits == 0 && number.digits < 0) {
-        os << '-';
-    }
-
-    return os << (number.digits / 10) << '.' << std::abs(number.digits % 10);
-}
-
-int main()
-{
-    std::ifstream file{"measurements.txt"};
-    std::unordered_map<std::string, Measurements> stations;
-
-    // SLOW!!!
-    readStations(file, stations);
-
-    // Sort the keys
-    std::vector<std::string> keys;
-    keys.reserve(stations.size());
-    for (const auto &data : stations)
-    {
-        keys.push_back(data.first);
-    }
-    std::sort(keys.begin(), keys.end());
-
-    // Print the results
-    std::cout << '{';
-    std::size_t i = 0;
-
-    // Print each station summary using the format: <station>=<min>/<mean>/<max>
-    for (const auto &key : keys)
-    {
-        const auto &data = stations.at(key);
-        std::cout << key << '='
-                  << std::fixed << std::setprecision(1)
-                  << data.min() << '/'
-                  << data.mean() << '/'
-                  << data.max();
-
-        if (i + 1 < stations.size())
-        {
-            std::cout << ", ";
-        }
-
-        i++;
-    }
-
-    std::cout << '}';
-
-    return 0;
-}
-
-void readStations(std::ifstream &file, std::unordered_map<std::string, Measurements> &stations)
+static inline auto readStations(std::ifstream &file, std::unordered_map<std::string, Measurements> &stations) -> void
 {
     enum ParserStatus
     {
@@ -146,73 +87,138 @@ void readStations(std::ifstream &file, std::unordered_map<std::string, Measureme
     };
 
     // Read each line using the format: <station>;<measurement>\n
-    std::string station{};
-    char c{};
-    std::int64_t measurement{};
-    ParserStatus status{ParserStatus::StationName};
+    auto station = std::string{};
+    auto c = char{};
+    auto measurement = std::int64_t{0};
+    auto status = ParserStatus::StationName;
+
+    // Read chunks of memory
+    constexpr auto chunkSize = std::streamsize{4096};
+    auto chunk = std::array<char, chunkSize>{};
 
     // Read each character in the file
-    while (file.get(c))
+    while (file.read(chunk.data(), chunkSize))
     {
-        switch (status)
+        for (auto i = 0; i < file.gcount(); i++)
         {
-        case ParserStatus::StationName:
-        {
-            switch (c)
+            c = chunk[i];
+            switch (status)
             {
-            case ';':
-                status = ParserStatus::Measurement;
-                break;
-            default:
-                station += c;
-            }
-        }
-        break;
-        case ParserStatus::Measurement:
-        {
-            switch (c)
+            case ParserStatus::StationName:
             {
-            case '-':
-                status = ParserStatus::NegativeMeasurement;
-                measurement = 0;
-                break;
-            default:
-                status = ParserStatus::PositiveMeasurement;
-                measurement = static_cast<std::int64_t>(c - '0');
+                switch (c)
+                {
+                case ';':
+                    status = ParserStatus::Measurement;
+                    break;
+                default:
+                    station += c;
+                }
             }
-        }
-        break;
-        case ParserStatus::PositiveMeasurement:
-        {
-            switch (c)
+            break;
+            case ParserStatus::Measurement:
             {
-            case '\n':
-                status = ParserStatus::StationName;
-                stations[station].record(measurement);
-                station.clear();
-                break;
-            case '.':
-                break;
-            default:
-                measurement = measurement * 10 + static_cast<std::int64_t>(c - '0');
+                switch (c)
+                {
+                case '-':
+                    status = ParserStatus::NegativeMeasurement;
+                    measurement = 0;
+                    break;
+                default:
+                    status = ParserStatus::PositiveMeasurement;
+                    measurement = static_cast<std::int64_t>(c - '0');
+                }
             }
-        }
-        break;
-        case ParserStatus::NegativeMeasurement:
-        {
-            switch (c)
+            break;
+            case ParserStatus::PositiveMeasurement:
             {
-            case '\n':
-                status = ParserStatus::StationName;
-                stations[station].record(measurement);
-                station.clear();
-                break;
-            case '.':
-                break;
-            default:
-                measurement = measurement * 10 - static_cast<std::int64_t>(c - '0');
+                switch (c)
+                {
+                case '\n':
+                    status = ParserStatus::StationName;
+                    stations[station].record(measurement);
+                    station.clear();
+                    break;
+                case '.':
+                    break;
+                default:
+                    measurement = measurement * 10 + static_cast<std::int64_t>(c - '0');
+                }
             }
-        }
+            break;
+            case ParserStatus::NegativeMeasurement:
+            {
+                switch (c)
+                {
+                case '\n':
+                    status = ParserStatus::StationName;
+                    stations[station].record(measurement);
+                    station.clear();
+                    break;
+                case '.':
+                    break;
+                default:
+                    measurement = measurement * 10 - static_cast<std::int64_t>(c - '0');
+                }
+            }
+            }
         }
     }
+}
+
+static inline auto operator<<(std::ostream &os, const Number &number) -> std::ostream &
+{
+    auto wholeDigits = number.digits / 10;
+    auto decimalDigits = std::abs(number.digits % 10);
+
+    if (wholeDigits == 0 && number.digits < 0)
+    {
+        os << '-';
+    }
+
+    return os << wholeDigits << '.' << decimalDigits;
+}
+
+static inline auto operator<<(std::ostream &os, const Measurements &measurements) -> std::ostream &
+{
+    return os << measurements.min() << '/'
+              << measurements.mean() << '/'
+              << measurements.max();
+}
+
+int main()
+{
+    auto file = std::ifstream{"measurements.txt", std::ios::binary};
+    auto stations = std::unordered_map<std::string, Measurements>{};
+
+    // SLOW!!!
+    readStations(file, stations);
+
+    // Copy and sort the station names
+    auto keys = std::vector<std::string>{stations.size()};
+    std::transform(stations.cbegin(),
+                   stations.cend(),
+                   keys.begin(),
+                   [](const auto &station)
+                   { return station.first; });
+    std::sort(keys.begin(), keys.end());
+
+    // Print the results
+    std::cout << '{';
+
+    // Print each station summary using the format: <station>=<min>/<mean>/<max>
+    for (auto it = keys.cbegin(); it != keys.cend(); it++)
+    {
+        const auto &key = *it;
+        std::cout << key << '=' << stations.at(key);
+
+        if (it + 1 != keys.cend())
+        {
+            std::cout << ", ";
+        }
+    }
+
+    std::cout << '}';
+
+    return 0;
 }
