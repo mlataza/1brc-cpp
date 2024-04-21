@@ -9,10 +9,24 @@
 #include <algorithm>
 #include <thread>
 #include <array>
+#include <filesystem>
 
 struct Number
 {
     std::int64_t digits;
+
+    friend inline auto operator<<(std::ostream &os, const Number &number) -> std::ostream &
+    {
+        auto wholeDigits = number.digits / 10;
+        auto decimalDigits = std::abs(number.digits % 10);
+
+        if (wholeDigits == 0 && number.digits < 0)
+        {
+            os << '-';
+        }
+
+        return os << wholeDigits << '.' << decimalDigits;
+    }
 };
 
 class Measurements
@@ -34,10 +48,8 @@ public:
         }
         else
         {
-            if (measurement < _min)
-                _min = measurement;
-            if (measurement > _max)
-                _max = measurement;
+            _min = std::min(_min, measurement);
+            _max = std::max(_max, measurement);
             _sum += measurement;
             _count++;
         }
@@ -46,13 +58,15 @@ public:
     inline auto mean() const -> Number
     {
         auto digits = (_sum * 10) / _count;
+        auto number = digits / 10;
 
+        // Round off the hundredths digit
         if (std::abs(digits % 10) >= 5)
         {
-            return {(digits / 10) + (digits < 0 ? -1 : 1)};
+            number += digits < 0 ? -1 : 1;
         }
 
-        return {digits / 10};
+        return {number};
     }
 
     inline auto min() const -> Number
@@ -65,18 +79,23 @@ public:
         return {_max};
     }
 
-    inline auto sum() const -> std::int64_t
+    inline auto merge(const Measurements &measurements) -> void
     {
-        return _sum;
+        _min = std::min(_min, measurements._min);
+        _max = std::max(_max, measurements._max);
+        _sum += measurements._sum;
+        _count += measurements._count;
     }
 
-    inline auto count() const -> std::int64_t
+    friend inline auto operator<<(std::ostream &os, const Measurements &measurements) -> std::ostream &
     {
-        return _count;
+        return os << measurements.min() << '/'
+                  << measurements.mean() << '/'
+                  << measurements.max();
     }
 };
 
-static inline auto readStations(std::ifstream &file, std::unordered_map<std::string, Measurements> &stations) -> void
+class Parser
 {
     enum ParserStatus
     {
@@ -86,33 +105,29 @@ static inline auto readStations(std::ifstream &file, std::unordered_map<std::str
         NegativeMeasurement
     };
 
-    // Read each line using the format: <station>;<measurement>\n
-    auto station = std::string{};
-    auto c = char{};
-    auto measurement = std::int64_t{0};
-    auto status = ParserStatus::StationName;
+    std::string _station;
+    std::int64_t _measurement = 0;
+    ParserStatus _status = ParserStatus::StationName;
 
-    // Read chunks of memory
-    constexpr auto chunkSize = std::streamsize{4096};
-    auto chunk = std::array<char, chunkSize>{};
-
-    // Read each character in the file
-    while (file.read(chunk.data(), chunkSize))
+public:
+    template <typename InputIterator, typename Map>
+    auto operator()(InputIterator begin, InputIterator end, Map &stations) -> void
     {
-        for (auto i = 0; i < file.gcount(); i++)
+        for (auto it = begin; it != end; it++)
         {
-            c = chunk[i];
-            switch (status)
+            char c = *it;
+
+            switch (_status)
             {
             case ParserStatus::StationName:
             {
                 switch (c)
                 {
                 case ';':
-                    status = ParserStatus::Measurement;
+                    _status = ParserStatus::Measurement;
                     break;
                 default:
-                    station += c;
+                    _station += c;
                 }
             }
             break;
@@ -121,12 +136,12 @@ static inline auto readStations(std::ifstream &file, std::unordered_map<std::str
                 switch (c)
                 {
                 case '-':
-                    status = ParserStatus::NegativeMeasurement;
-                    measurement = 0;
+                    _status = ParserStatus::NegativeMeasurement;
+                    _measurement = 0;
                     break;
                 default:
-                    status = ParserStatus::PositiveMeasurement;
-                    measurement = static_cast<std::int64_t>(c - '0');
+                    _status = ParserStatus::PositiveMeasurement;
+                    _measurement = static_cast<std::int64_t>(c - '0');
                 }
             }
             break;
@@ -135,14 +150,14 @@ static inline auto readStations(std::ifstream &file, std::unordered_map<std::str
                 switch (c)
                 {
                 case '\n':
-                    status = ParserStatus::StationName;
-                    stations[station].record(measurement);
-                    station.clear();
+                    _status = ParserStatus::StationName;
+                    stations[_station].record(_measurement);
+                    _station.clear();
                     break;
                 case '.':
                     break;
                 default:
-                    measurement = measurement * 10 + static_cast<std::int64_t>(c - '0');
+                    _measurement = _measurement * 10 + static_cast<std::int64_t>(c - '0');
                 }
             }
             break;
@@ -151,62 +166,105 @@ static inline auto readStations(std::ifstream &file, std::unordered_map<std::str
                 switch (c)
                 {
                 case '\n':
-                    status = ParserStatus::StationName;
-                    stations[station].record(measurement);
-                    station.clear();
+                    _status = ParserStatus::StationName;
+                    stations[_station].record(_measurement);
+                    _station.clear();
                     break;
                 case '.':
                     break;
                 default:
-                    measurement = measurement * 10 - static_cast<std::int64_t>(c - '0');
+                    _measurement = _measurement * 10 - static_cast<std::int64_t>(c - '0');
                 }
             }
             }
         }
     }
-}
+};
 
-static inline auto operator<<(std::ostream &os, const Number &number) -> std::ostream &
+using MapType = std::unordered_map<std::string, Measurements>;
+
+constexpr auto chunkSize = 1 << 16;
+
+auto process(int index, int numberOfThreads, MapType &stations) -> void
 {
-    auto wholeDigits = number.digits / 10;
-    auto decimalDigits = std::abs(number.digits % 10);
+    // Compute the chunk start and size
+    auto fileSize = std::filesystem::file_size("measurements.txt");
+    auto partSize = (fileSize + numberOfThreads - 1) / numberOfThreads; // ceiling
+    auto partStart = partSize * index;
+    auto partEnd = std::min(partStart + partSize, fileSize);
 
-    if (wholeDigits == 0 && number.digits < 0)
+    // Adjust the part start and end pointers
+    auto file = std::ifstream{"measurements.txt", std::ios::binary};
+    if (index + 1 < numberOfThreads)
     {
-        os << '-';
+        // Adjust partEnd to align after '\n' character
+        for (char c; file.seekg(partEnd - 1), file.read(&c, 1), c != '\n'; partEnd++)
+        {
+        }
     }
 
-    return os << wholeDigits << '.' << decimalDigits;
-}
+    if (0 < index)
+    {
+        // Adjust partStart to align after '\n' character
+        for (char c; file.seekg(partStart - 1), file.read(&c, 1), c != '\n'; partStart++)
+        {
+        }
+    }
 
-static inline auto operator<<(std::ostream &os, const Measurements &measurements) -> std::ostream &
-{
-    return os << measurements.min() << '/'
-              << measurements.mean() << '/'
-              << measurements.max();
+    // Read chunks of memory
+    auto parser = Parser{};
+    auto chunk = std::array<char, chunkSize>{};
+
+    // Move file pointer to partStart
+    file.seekg(partStart);
+
+    // Read each line using the format: <station>;<measurement>\n
+    for (auto current = partStart; current < partEnd; current += chunkSize)
+    {
+        auto size = std::min(static_cast<std::uintmax_t>(chunkSize), partEnd - current);
+        file.read(chunk.data(), size);
+        parser(chunk.cbegin(), chunk.cbegin() + size, stations);
+    }
 }
 
 auto main() -> int
 {
-    auto file = std::ifstream{"measurements.txt", std::ios::binary};
-    auto stations = std::unordered_map<std::string, Measurements>{};
+    auto stations = MapType{};
 
-    // TODO: Read the file using threads
-    readStations(file, stations);
+    // Read the file using threads
+    auto threads = std::vector<std::thread>{};
+    auto numberOfThreads = static_cast<int>(std::thread::hardware_concurrency());
+    auto stationMaps = std::vector<MapType>{static_cast<std::size_t>(numberOfThreads)};
+    for (auto i = 0; i < numberOfThreads; i++)
+    {
+        threads.push_back(std::thread{process, i, numberOfThreads, std::ref(stationMaps.at(i))});
+    }
+
+    // Wait for the threads to finish
+    for (auto &thread : threads)
+    {
+        thread.join();
+    }
+
+    // Merge stations
+    for (const auto &map : stationMaps)
+    {
+        for (const auto &[key, measurements] : map)
+        {
+            stations[key].merge(measurements);
+        }
+    }
 
     // Copy and sort the station names
-    auto keys = std::vector<std::string>{stations.size()};
-    std::transform(stations.cbegin(),
-                   stations.cend(),
-                   keys.begin(),
-                   [](const auto &station)
-                   { return station.first; });
+    auto keys = std::vector<std::string>{};
+    for (const auto &pair : stations)
+    {
+        keys.push_back(pair.first);
+    }
     std::sort(keys.begin(), keys.end());
 
-    // Print the results
-    std::cout << '{';
-
     // Print each station summary using the format: <station>=<min>/<mean>/<max>
+    std::cout << '{';
     for (auto it = keys.cbegin(); it != keys.cend(); it++)
     {
         const auto &key = *it;
@@ -217,7 +275,6 @@ auto main() -> int
             std::cout << ", ";
         }
     }
-
     std::cout << '}';
 
     return 0;
