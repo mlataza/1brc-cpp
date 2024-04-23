@@ -183,7 +183,7 @@ public:
 
 using MapType = std::unordered_map<std::string, Measurements>;
 
-constexpr auto chunkSize = 1 << 16;
+constexpr auto chunkSize = 1 << 12;
 
 auto process(int index, int numberOfThreads, MapType &stations) -> void
 {
