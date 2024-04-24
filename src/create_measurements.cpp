@@ -13,15 +13,26 @@ static std::default_random_engine generator{
         .count()};
 
 // Define structures
-struct WeatherStation
+class WeatherStation
 {
-    std::string id;
-    double meanTemperature;
+    std::string _id;
+    double _meanTemperature;
+    std::normal_distribution<double> _distribution;
 
-    double measurement() const
+public:
+    WeatherStation(const std::string &id, double meanTemperature) noexcept
+        : _id{id}, _meanTemperature{meanTemperature}, _distribution{meanTemperature, 10.0}
     {
-        std::normal_distribution<double> distribution{meanTemperature, 10.0};
-        double m = distribution(generator);
+    }
+
+    constexpr auto id() noexcept -> const std::string &
+    {
+        return _id;
+    }
+
+    inline auto measurement() noexcept -> double
+    {
+        double m = _distribution(generator);
         return std::round(m * 10.0) / 10.0;
     }
 };
@@ -487,9 +498,14 @@ int main(int argc, char **argv)
                       << std::chrono::duration<double, std::milli>(current - start).count() << " ms\n";
         }
 
-        const auto &station = stations[stationDistribution(generator)];
-        file << station.id << ";" << std::fixed << std::setprecision(1) << station.measurement() << "\n";
+        auto &station = stations[stationDistribution(generator)];
+        file << station.id() << ";" << std::fixed << std::setprecision(1) << station.measurement() << "\n";
     }
+
+    // Show total execution time
+    auto current = std::chrono::system_clock::now();
+    std::cout << "Created file with " << records << " measurements in "
+        << std::chrono::duration<double, std::milli>(current - start).count() << " ms\n";
 
     return 0;
 }

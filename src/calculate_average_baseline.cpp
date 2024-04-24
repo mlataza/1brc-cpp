@@ -5,36 +5,50 @@
 #include <iomanip>
 #include <cmath>
 
-struct Measurements
+constexpr auto roundToPositive(double n) noexcept -> double
 {
-    int count = 0;
-    double min = 0.0;
-    double max = 0.0;
-    double sum = 0.0;
+    return std::floor(n + 0.5);
+}
 
-    void record(double measurement)
+class Measurements
+{
+    int _count = 0;
+    double _min = 0.0;
+    double _max = 0.0;
+    double _sum = 0.0;
+
+public:
+    constexpr auto record(double measurement) noexcept -> void
     {
-        if (count == 0)
+        if (_count == 0)
         {
-            min = measurement;
-            max = measurement;
-            sum = measurement;
-            count = 1;
+            _min = measurement;
+            _max = measurement;
+            _sum = measurement;
+            _count = 1;
         }
         else
         {
-            if (measurement < min)
-                min = measurement;
-            if (measurement > max)
-                max = measurement;
-            sum += measurement;
-            count++;
+            _min = std::min(_min, measurement);
+            _max = std::max(_max, measurement);
+            _sum += measurement;
+            _count++;
         }
     }
 
-    double mean() const
+    constexpr auto mean() const noexcept -> double
     {
-        return std::round(sum * 10.0 / count) / 10.0;
+        return roundToPositive(_sum * 10.0) / 10.0 / _count;
+    }
+
+    constexpr auto min() const noexcept -> double
+    {
+        return roundToPositive(_min * 10.0) / 10.0;
+    }
+
+    constexpr auto max() const noexcept -> double
+    {
+        return roundToPositive(_max * 10.0) / 10.0;
     }
 };
 
@@ -59,9 +73,9 @@ int main()
     {
         std::cout << data.first << '='
                   << std::fixed << std::setprecision(1)
-                  << data.second.min << '/'
+                  << data.second.min() << '/'
                   << data.second.mean() << '/'
-                  << data.second.max;
+                  << data.second.max();
 
         if (i + 1 < stations.size())
         {
