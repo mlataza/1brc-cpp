@@ -1,13 +1,7 @@
 # One Billion Row Challenge (C++ 17)
-Configure the build files using the command below.
-```bash
-cmake .
-```
-Build the binaries using the command below.
+Built using CMake. Developed in Ubuntu WSL2.
 
-```bash
-cmake --build .
-```
+The executables are built in the `build` folder. Run the executables within the `build` folder.
 
 To generate the rows, use the command below.
 ```bash

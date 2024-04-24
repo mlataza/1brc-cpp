@@ -1,11 +1,3 @@
 /build
 /.vscode
-/CMakeFiles
-*.cmake
-*.txt
-!CMakeLists.txt
 Makefile
-
-create_measurements
-
-/calculate_average*
