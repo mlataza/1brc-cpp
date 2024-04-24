@@ -38,7 +38,8 @@ public:
 
     constexpr auto mean() const noexcept -> double
     {
-        return roundToPositive(_sum * 10.0) / 10.0 / _count;
+        auto average = roundToPositive(_sum * 10.0) / 10.0 / _count;
+        return roundToPositive(average * 10.0) / 10.0;
     }
 
     constexpr auto min() const noexcept -> double
