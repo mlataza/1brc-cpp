@@ -11,24 +11,6 @@
 #include <array>
 #include <filesystem>
 
-struct Number
-{
-    std::int64_t digits;
-
-    friend inline auto operator<<(std::ostream &os, const Number &number) -> std::ostream &
-    {
-        auto wholeDigits = number.digits / 10;
-        auto decimalDigits = std::abs(number.digits % 10);
-
-        if (wholeDigits == 0 && number.digits < 0)
-        {
-            os << '-';
-        }
-
-        return os << wholeDigits << '.' << decimalDigits;
-    }
-};
-
 class Measurements
 {
     std::int64_t _count = 0;
@@ -37,7 +19,7 @@ class Measurements
     std::int64_t _sum = 0;
 
 public:
-    inline auto record(std::int64_t measurement) -> void
+    constexpr auto record(std::int64_t measurement) noexcept
     {
         if (_count == 0)
         {
@@ -55,39 +37,49 @@ public:
         }
     }
 
-    inline auto mean() const -> Number
+    constexpr auto roundToPositive(double n) const noexcept
     {
-        auto digits = (_sum * 10) / _count;
-        auto number = digits / 10;
+        // std::round uses "round to zero" but Math.round in Java uses "round to positive"
+        return std::floor(n + 0.5);
+    }
 
-        // Round off the hundredths digit
-        if (std::abs(digits % 10) >= 5)
+    constexpr auto round(double n) const noexcept
+    {
+        // Round to nearest tenths place
+        return roundToPositive(n * 10.0) / 10.0;
+    }
+
+    constexpr auto mean() const noexcept
+    {
+        return round(static_cast<double>(_sum) / 10.0 / _count);
+    }
+
+    constexpr auto min() const noexcept
+    {
+        return round(static_cast<double>(_min) / 10.0);
+    }
+
+    constexpr auto max() const noexcept
+    {
+        return round(static_cast<double>(_max) / 10.0);
+    }
+
+    constexpr auto merge(const Measurements &measurements) noexcept
+    {
+        if (_count == 0)
         {
-            number += digits < 0 ? -1 : 1;
+            *this = measurements;
         }
-
-        return {number};
+        else
+        {
+            _min = std::min(_min, measurements._min);
+            _max = std::max(_max, measurements._max);
+            _sum += measurements._sum;
+            _count += measurements._count;
+        }
     }
 
-    inline auto min() const -> Number
-    {
-        return {_min};
-    }
-
-    inline auto max() const -> Number
-    {
-        return {_max};
-    }
-
-    inline auto merge(const Measurements &measurements) -> void
-    {
-        _min = std::min(_min, measurements._min);
-        _max = std::max(_max, measurements._max);
-        _sum += measurements._sum;
-        _count += measurements._count;
-    }
-
-    friend inline auto operator<<(std::ostream &os, const Measurements &measurements) -> std::ostream &
+    friend inline auto operator<<(std::ostream &os, const Measurements &measurements) noexcept -> std::ostream &
     {
         return os << measurements.min() << '/'
                   << measurements.mean() << '/'
@@ -111,7 +103,7 @@ class Parser
 
 public:
     template <typename InputIterator, typename Map>
-    auto operator()(InputIterator begin, InputIterator end, Map &stations) -> void
+    auto operator()(InputIterator begin, InputIterator end, Map &stations) noexcept
     {
         for (auto it = begin; it != end; it++)
         {
@@ -185,7 +177,7 @@ using MapType = std::unordered_map<std::string, Measurements>;
 
 constexpr auto chunkSize = 1 << 12;
 
-auto process(int index, int numberOfThreads, MapType &stations) -> void
+auto process(int index, int numberOfThreads, MapType &stations) noexcept
 {
     // Compute the chunk start and size
     auto fileSize = std::filesystem::file_size("measurements.txt");
@@ -227,7 +219,7 @@ auto process(int index, int numberOfThreads, MapType &stations) -> void
     }
 }
 
-auto main() -> int
+int main()
 {
     auto stations = MapType{};
 
@@ -264,7 +256,7 @@ auto main() -> int
     std::sort(keys.begin(), keys.end());
 
     // Print each station summary using the format: <station>=<min>/<mean>/<max>
-    std::cout << '{';
+    std::cout << '{' << std::fixed << std::setprecision(1);
     for (auto it = keys.cbegin(); it != keys.cend(); it++)
     {
         const auto &key = *it;
