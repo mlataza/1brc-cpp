@@ -228,7 +228,8 @@ public:
 
 using MapType = std::unordered_map<std::string, Measurements, PerfectHash>;
 
-constexpr auto chunkSize = 1 << 12;
+static constexpr auto chunkSize = 1 << 12;
+static constexpr auto fileName = "measurements.txt";
 
 auto process(int index, int numberOfThreads, std::uintmax_t fileSize, MapType &stations) noexcept
 {
@@ -238,7 +239,7 @@ auto process(int index, int numberOfThreads, std::uintmax_t fileSize, MapType &s
     auto partEnd = std::min(partStart + partSize, fileSize);
 
     // Adjust the part start and end pointers
-    auto file = std::ifstream{"measurements.txt", std::ios::binary};
+    auto file = std::ifstream{fileName, std::ios::binary};
     if (index + 1 < numberOfThreads)
     {
         // Adjust partEnd to align after '\n' character
@@ -276,7 +277,7 @@ int main()
     auto stations = MapType{};
 
     // Read the file using threads
-    auto fileSize = std::filesystem::file_size("measurements.txt");
+    auto fileSize = std::filesystem::file_size(fileName);
     auto threads = std::vector<std::thread>{};
     auto numberOfThreads = static_cast<int>(std::thread::hardware_concurrency());
     auto stationMaps = std::vector<MapType>{static_cast<std::size_t>(numberOfThreads)};
