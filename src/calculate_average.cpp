@@ -11,6 +11,61 @@
 #include <array>
 #include <filesystem>
 
+// Generated using gperf and the station names inside the create_measurements
+struct PerfectHash
+{
+    std::size_t operator()(const std::string &str) const noexcept
+    {
+        static unsigned short asso_values[] =
+            {
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 110, 1269, 1269, 1269, 1269, 1269, 1269, 0,
+                1269, 0, 1269, 1269, 1269, 0, 0, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 145, 10, 240, 65, 175,
+                33, 413, 320, 280, 30, 190, 325, 0, 340, 335,
+                170, 1269, 385, 105, 115, 40, 456, 190, 0, 340,
+                0, 1269, 1269, 1269, 1269, 1269, 1269, 0, 280, 280,
+                310, 15, 15, 250, 225, 5, 210, 35, 25, 90,
+                0, 30, 325, 5, 5, 20, 105, 200, 275, 315,
+                5, 260, 130, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 0, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 5, 325,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 20, 1269, 1269, 1269, 10, 1269,
+                1269, 1269, 1269, 1269, 1269, 5, 10, 0, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
+                1269, 1269, 1269, 1269, 1269, 1269};
+
+        unsigned int len = str.length();
+        unsigned int hval = len;
+
+        switch (hval)
+        {
+        default:
+            hval += asso_values[static_cast<unsigned char>(str[4])];
+        /*FALLTHROUGH*/
+        case 4:
+        case 3:
+            hval += asso_values[static_cast<unsigned char>(str[2])];
+        /*FALLTHROUGH*/
+        case 2:
+        case 1:
+            hval += asso_values[static_cast<unsigned char>(str[0])];
+            break;
+        }
+        return hval + asso_values[static_cast<unsigned char>(str[len - 1])];
+    }
+};
+
 class Measurements
 {
     std::int64_t _count = 0;
@@ -19,7 +74,7 @@ class Measurements
     std::int64_t _sum = 0;
 
 public:
-    constexpr auto record(std::int64_t measurement) noexcept
+    inline auto record(std::int64_t measurement) noexcept
     {
         if (_count == 0)
         {
@@ -37,34 +92,34 @@ public:
         }
     }
 
-    constexpr auto roundToPositive(double n) const noexcept
+    inline auto roundToPositive(double n) const noexcept
     {
         // std::round uses "round to zero" but Math.round in Java uses "round to positive"
         return std::floor(n + 0.5);
     }
 
-    constexpr auto round(double n) const noexcept
+    inline auto round(double n) const noexcept
     {
         // Round to nearest tenths place
         return roundToPositive(n * 10.0) / 10.0;
     }
 
-    constexpr auto mean() const noexcept
+    inline auto mean() const noexcept
     {
         return round(static_cast<double>(_sum) / 10.0 / _count);
     }
 
-    constexpr auto min() const noexcept
+    inline auto min() const noexcept
     {
         return round(static_cast<double>(_min) / 10.0);
     }
 
-    constexpr auto max() const noexcept
+    inline auto max() const noexcept
     {
         return round(static_cast<double>(_max) / 10.0);
     }
 
-    constexpr auto merge(const Measurements &measurements) noexcept
+    inline auto merge(const Measurements &measurements) noexcept
     {
         if (_count == 0)
         {
@@ -79,7 +134,7 @@ public:
         }
     }
 
-    friend inline auto operator<<(std::ostream &os, const Measurements &measurements) noexcept -> std::ostream &
+    friend auto operator<<(std::ostream &os, const Measurements &measurements) noexcept -> std::ostream &
     {
         return os << measurements.min() << '/'
                   << measurements.mean() << '/'
@@ -173,7 +228,7 @@ public:
     }
 };
 
-using MapType = std::unordered_map<std::string, Measurements>;
+using MapType = std::unordered_map<std::string, Measurements, PerfectHash>;
 
 constexpr auto chunkSize = 1 << 12;
 
