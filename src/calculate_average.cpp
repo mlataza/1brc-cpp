@@ -11,12 +11,12 @@
 #include <array>
 #include <filesystem>
 
-// Generated using gperf and the station names inside the create_measurements
+// Generated with gperf using the station names inside the create_measurements.cpp
 struct PerfectHash
 {
     std::size_t operator()(const std::string &str) const noexcept
     {
-        static unsigned short asso_values[] =
+        static std::uint16_t asso_values[] =
             {
                 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
                 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
@@ -45,24 +45,24 @@ struct PerfectHash
                 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269, 1269,
                 1269, 1269, 1269, 1269, 1269, 1269};
 
-        unsigned int len = str.length();
-        unsigned int hval = len;
+        auto len = str.length();
+        auto hval = len;
 
         switch (hval)
         {
         default:
-            hval += asso_values[static_cast<unsigned char>(str[4])];
+            hval += asso_values[static_cast<std::uint8_t>(str[4])];
         /*FALLTHROUGH*/
         case 4:
         case 3:
-            hval += asso_values[static_cast<unsigned char>(str[2])];
+            hval += asso_values[static_cast<std::uint8_t>(str[2])];
         /*FALLTHROUGH*/
         case 2:
         case 1:
-            hval += asso_values[static_cast<unsigned char>(str[0])];
+            hval += asso_values[static_cast<std::uint8_t>(str[0])];
             break;
         }
-        return hval + asso_values[static_cast<unsigned char>(str[len - 1])];
+        return hval + asso_values[static_cast<std::uint8_t>(str[len - 1])];
     }
 };
 
@@ -94,7 +94,7 @@ public:
 
     inline auto roundToPositive(double n) const noexcept
     {
-        // std::round uses "round to zero" but Math.round in Java uses "round to positive"
+        // std::round(1) uses "round to zero" but Java's Math.round(1) uses "round to positive/round to infinity"
         return std::floor(n + 0.5);
     }
 
