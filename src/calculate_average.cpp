@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <unordered_map>
 #include <iomanip>
 #include <cmath>
@@ -66,15 +65,11 @@ struct PerfectHash
     }
 };
 
-class Measurements
+struct Measurements
 {
-    std::int64_t _count = 0;
-    std::int64_t _min = 0;
-    std::int64_t _max = 0;
-    std::int64_t _sum = 0;
+    using ValType = std::int32_t;
 
-public:
-    inline auto record(std::int64_t measurement) noexcept
+    inline auto record(ValType measurement) noexcept
     {
         if (_count == 0)
         {
@@ -140,6 +135,9 @@ public:
                   << measurements.mean() << '/'
                   << measurements.max();
     }
+
+private:
+    ValType _count = 0, _min = 0, _max = 0, _sum = 0;
 };
 
 class Parser
@@ -153,7 +151,7 @@ class Parser
     };
 
     std::string _station;
-    std::int64_t _measurement = 0;
+    Measurements::ValType _measurement = 0;
     ParserStatus _status = ParserStatus::StationName;
 
 public:
@@ -188,7 +186,7 @@ public:
                     break;
                 default:
                     _status = ParserStatus::PositiveMeasurement;
-                    _measurement = static_cast<std::int64_t>(c - '0');
+                    _measurement = static_cast<Measurements::ValType>(c - '0');
                 }
             }
             break;
@@ -204,7 +202,7 @@ public:
                 case '.':
                     break;
                 default:
-                    _measurement = _measurement * 10 + static_cast<std::int64_t>(c - '0');
+                    _measurement = _measurement * 10 + static_cast<Measurements::ValType>(c - '0');
                 }
             }
             break;
@@ -220,7 +218,7 @@ public:
                 case '.':
                     break;
                 default:
-                    _measurement = _measurement * 10 - static_cast<std::int64_t>(c - '0');
+                    _measurement = _measurement * 10 - static_cast<Measurements::ValType>(c - '0');
                 }
             }
             }
