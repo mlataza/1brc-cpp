@@ -230,10 +230,9 @@ using MapType = std::unordered_map<std::string, Measurements, PerfectHash>;
 
 constexpr auto chunkSize = 1 << 12;
 
-auto process(int index, int numberOfThreads, MapType &stations) noexcept
+auto process(int index, int numberOfThreads, std::uintmax_t fileSize, MapType &stations) noexcept
 {
     // Compute the chunk start and size
-    auto fileSize = std::filesystem::file_size("measurements.txt");
     auto partSize = (fileSize + numberOfThreads - 1) / numberOfThreads; // ceiling
     auto partStart = partSize * index;
     auto partEnd = std::min(partStart + partSize, fileSize);
@@ -277,12 +276,13 @@ int main()
     auto stations = MapType{};
 
     // Read the file using threads
+    auto fileSize = std::filesystem::file_size("measurements.txt");
     auto threads = std::vector<std::thread>{};
     auto numberOfThreads = static_cast<int>(std::thread::hardware_concurrency());
     auto stationMaps = std::vector<MapType>{static_cast<std::size_t>(numberOfThreads)};
     for (auto i = 0; i < numberOfThreads; i++)
     {
-        threads.push_back(std::thread{process, i, numberOfThreads, std::ref(stationMaps.at(i))});
+        threads.push_back(std::thread{process, i, numberOfThreads, fileSize, std::ref(stationMaps.at(i))});
     }
 
     // Wait for the threads to finish
